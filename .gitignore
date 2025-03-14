@@ -1,0 +1,9 @@
+# Ignore the actual user configuration file
+userConfig.gs
+
+# But allow the example configuration
+!userConfig.example.gs
+
+# Ignore common OS files
+.DS_Store
+Thumbs.db 
