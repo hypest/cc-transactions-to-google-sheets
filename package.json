@@ -1,0 +1,11 @@
+{
+  "name": "cc-transactions-to-sheets",
+  "version": "1.0.0",
+  "description": "Credit card transactions to Google Sheets",
+  "main": "code.js",
+  "scripts": {
+    "test": "node test.local.js",
+    "test:debug": "node --inspect-brk test.local.js"
+  },
+  "type": "commonjs"
+} 
