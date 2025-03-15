@@ -1,253 +1,517 @@
-// Global configuration object to hold all hardcoded variables
-var config = {
-  labels: {
-    primary: 'cc_transactions_report', // Label for primary search
-    processed: 'auto_cc_report_processed', // Label for processed emails
-  },
-  transactionTypes: {
-    credit: 'ΧΡΕΩΣΗ', // Credit transaction type (in Greek)
-    debit: 'ΠΙΣΤΩΣΗ', // Debit transaction type (in Greek)
-  },
-  cardIdentifierPattern: {
-    prefix: 'Σύνολο Κινήσεων Κάρτας \\*\\*',
-  },
-  regex: {
-    cardIdentifiers: {}, // Will hold the RegExp for each card
-  },
-};
-
-// Initialize card identifier patterns
-userConfig.cards.forEach(card => {
-  config.regex.cardIdentifiers[card.lastFourDigits] = new RegExp(
-    `${config.cardIdentifierPattern.prefix}${card.lastFourDigits}`
-  );
-});
-
-// Define the transaction regex
-config.regex.transaction = new RegExp(
-  `(?<transactionType>${config.transactionTypes.credit}|${config.transactionTypes.debit})\\s` +
-  `(?<amount>[\\d,]+)\\sΗμ\\/νία:\\s(?<date>\\d{2}\\/\\d{2}\\/\\d{4})\\s` +
-  `Αιτιολογία:\\s(?<description>.+?)\\sΈξοδα\\sΣυναλλάγματος:\\s` +
-  `(?<forexFees>[\\d,]+)\\sΈξοδα\\sΑνάληψης\\sΜετρητών:\\s(?<cashWithdrawalFees>[\\d,]+)`,
-  'g'
-);
-
+// Interfaces
 /**
- * Main function to execute the workflow.
+ * @interface IConfig
  */
-function find_and_process_card_transaction_emails() {
-  try {
-    Logger.log('Starting the email processing workflow...');
-    fetchEmails(); // Fetch and process emails
-    Logger.log('Workflow completed successfully.');
-  } catch (e) {
-    Logger.log('Error in main execution: ' + e.message);
-    throw e;
-  }
+class IConfig {
+  /** @returns {Object} */
+  get labels() { throw new Error('Not implemented'); }
+  /** @returns {Object} */
+  get transactionTypes() { throw new Error('Not implemented'); }
+  /** @returns {Object} */
+  get regex() { throw new Error('Not implemented'); }
 }
 
 /**
- * Fetches emails with the 'cc_transactions_report' label and processes them.
+ * @interface IGmailService
  */
-function fetchEmails() {
-  try {
-    Logger.log('Fetching emails...');
-    var threads = GmailApp.search('label:' + config.labels.primary + ' -label:' + config.labels.processed);
-    Logger.log('Found ' + threads.length + ' email threads to process.');
-
-    threads.forEach(function(thread) {
-      processThread(thread);
-
-      // Mark thread as processed
-      markThreadAsProcessed(thread);
-    });
-  } catch (e) {
-    Logger.log('Error while fetching emails: ' + e.message);
-    throw e;
-  }
+class IGmailService {
+  /** @returns {GmailThread[]} */
+  getUnprocessedThreads() { throw new Error('Not implemented'); }
+  /** @param {GmailThread} thread */
+  markThreadAsProcessed(thread) { throw new Error('Not implemented'); }
 }
 
 /**
- * Processes each thread by fetching its messages and processing them.
+ * @interface ITransactionProcessor
  */
-function processThread(thread) {
-  try {
-    // Logger.log('Processing thread: ' + thread.getId());
-    var messages = thread.getMessages();
-    messages.forEach(function(message) {
-      processMessage(message);
-    });
-  } catch (e) {
-    Logger.log('Error while processing thread ' + thread.getId() + ': ' + e.message);
-    throw e;
-  }
+class ITransactionProcessor {
+  /**
+   * @param {string} emailBody
+   * @param {Object} userConfig
+   * @returns {Object|null}
+   */
+  identifyCard(emailBody, userConfig) { throw new Error('Not implemented'); }
+  /**
+   * @param {string} emailBody
+   * @param {string} cardName
+   * @returns {Transaction[]}
+   */
+  extractTransactions(emailBody, cardName) { throw new Error('Not implemented'); }
 }
 
 /**
- * Processes a single email message: identifies the card, extracts transactions, and inserts into the sheet.
+ * @interface ISheetsService
  */
-function processMessage(message) {
-  try {
-    // Logger.log('Processing message: ' + message.getId());
-    var emailBody = message.getPlainBody();
+class ISheetsService {
+  /**
+   * @param {Transaction[]} transactions
+   * @param {string} sheetName
+   */
+  addTransactionsToSheet(transactions, sheetName) { throw new Error('Not implemented'); }
+}
+
+/**
+ * @interface ISheetsConfig
+ */
+class ISheetsConfig {
+  /** @returns {{credit: string, debit: string}} */
+  get transactionTypes() { throw new Error('Not implemented'); }
+}
+
+// Custom error classes
+class ConfigError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ConfigError';
+  }
+}
+
+class GmailServiceError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'GmailServiceError';
+  }
+}
+
+class TransactionProcessorError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'TransactionProcessorError';
+  }
+}
+
+class SheetsServiceError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'SheetsServiceError';
+  }
+}
+
+// Type definitions
+/**
+ * @typedef {Object} Transaction
+ * @property {string} card - Card name
+ * @property {number} amount - Transaction amount
+ * @property {string} transactionType - Type of transaction
+ * @property {string} date - Transaction date
+ * @property {string} description - Transaction description
+ * @property {string} forexFees - Foreign exchange fees
+ * @property {string} cashWithdrawalFees - Cash withdrawal fees
+ */
+
+// Configuration class to handle all config-related operations
+class Config extends IConfig {
+  /**
+   * @param {Object} userConfig
+   * @throws {ConfigError}
+   */
+  constructor(userConfig) {
+    super();
+    this.validateUserConfig(userConfig);
+
+    this._labels = {
+      primary: 'cc_transactions_report',
+      processed: 'auto_cc_report_processed',
+    };
+    this._transactionTypes = {
+      credit: 'ΧΡΕΩΣΗ',
+      debit: 'ΠΙΣΤΩΣΗ',
+    };
+    this._cardIdentifierPattern = {
+      prefix: 'Σύνολο Κινήσεων Κάρτας \\*\\*',
+    };
+    this._regex = {
+      cardIdentifiers: {},
+      transaction: null
+    };
     
-    // Identify the card
-    var card = identifyCard(emailBody);
-    if (card) {
-      Logger.log('Card identified: ' + card.name);
-
-      // Extract the transactions from the email body
-      var transactions = extractTransactions(emailBody, card.name);
-      if (transactions.length > 0) {
-        Logger.log('Extracted ' + transactions.length + ' transactions.');
-        
-        // Insert transactions into Google Sheets
-        addTransactionsToSheet(transactions, card.sheetName);
-      } else {
-        // Logger.log('No transactions found in this email.');
-        throw new Error('No transactions found in this email.');
-      }
-    } else {
-      Logger.log('No valid card identified in this email.');
-      throw new Error('No valid card identified in this email.');
-    }
-  } catch (e) {
-    Logger.log('Error while processing message ' + message.getId() + ': ' + e.message);
-    throw e;
+    this.initializeRegex(userConfig);
   }
-}
 
-/**
- * Identifies the card based on the email content.
- */
-function identifyCard(emailBody) {
-  try {
-    const card = userConfig.cards.find(card => 
-      config.regex.cardIdentifiers[card.lastFourDigits].test(emailBody)
+  /**
+   * @param {Object} userConfig
+   * @throws {ConfigError}
+   */
+  validateUserConfig(userConfig) {
+    if (!userConfig) {
+      throw new ConfigError('userConfig is required');
+    }
+    if (!Array.isArray(userConfig.cards)) {
+      throw new ConfigError('userConfig.cards must be an array');
+    }
+    if (!userConfig.cards.length) {
+      throw new ConfigError('userConfig.cards array cannot be empty');
+    }
+    userConfig.cards.forEach((card, index) => {
+      if (!card.lastFourDigits || !card.name || !card.sheetName) {
+        throw new ConfigError(`Invalid card configuration at index ${index}`);
+      }
+    });
+  }
+
+  get labels() { return this._labels; }
+  get transactionTypes() { return this._transactionTypes; }
+  get regex() { return this._regex; }
+
+  /**
+   * @private
+   * @param {Object} userConfig
+   */
+  initializeRegex(userConfig) {
+    // Initialize card identifier patterns
+    userConfig.cards.forEach(card => {
+      this._regex.cardIdentifiers[card.lastFourDigits] = new RegExp(
+        `${this._cardIdentifierPattern.prefix}${card.lastFourDigits}`
+      );
+    });
+
+    // Define the transaction regex
+    this._regex.transaction = new RegExp(
+      `(?<transactionType>${this._transactionTypes.credit}|${this._transactionTypes.debit})\\s` +
+      `(?<amount>[\\d,]+)\\sΗμ\\/νία:\\s(?<date>\\d{2}\\/\\d{2}\\/\\d{4})\\s` +
+      `Αιτιολογία:\\s(?<description>.+?)\\sΈξοδα\\sΣυναλλάγματος:\\s` +
+      `(?<forexFees>[\\d,]+)\\sΈξοδα\\sΑνάληψης\\sΜετρητών:\\s(?<cashWithdrawalFees>[\\d,]+)`,
+      'g'
     );
-    return card;
-  } catch (e) {
-    Logger.log('Error identifying card: ' + e.message);
-    throw e;
   }
 }
 
-/**
- * Extracts individual credit card transactions from the email content.
- */
-function extractTransactions(emailBody, cardName) {
-  var transactions = [];
-  try {
-    var regex = config.regex.transaction; // Using global config regex
-    var match;
-    while ((match = regex.exec(emailBody)) !== null) {
-      var amount = parseAmount(match.groups.amount); // Use the parseAmount function
-      var transactionType = match.groups.transactionType; // Directly assign the transaction type
+// Service for handling Gmail operations
+class GmailService extends IGmailService {
+  /**
+   * @param {IConfig} config
+   * @throws {GmailServiceError}
+   */
+  constructor(config) {
+    super();
+    if (!(config instanceof IConfig)) {
+      throw new GmailServiceError('Invalid config parameter');
+    }
+    this.config = config;
+  }
 
-      if (transactionType === config.transactionTypes.debit) {
-        amount = -amount; // Subtract for debit transactions (invert logic)
+  /**
+   * @returns {GmailThread[]}
+   * @throws {GmailServiceError}
+   */
+  getUnprocessedThreads() {
+    try {
+      return GmailApp.search('label:' + this.config.labels.primary + ' -label:' + this.config.labels.processed);
+    } catch (e) {
+      throw new GmailServiceError(`Failed to fetch unprocessed threads: ${e.message}`);
+    }
+  }
+
+  /**
+   * @param {GmailThread} thread
+   * @throws {GmailServiceError}
+   */
+  markThreadAsProcessed(thread) {
+    try {
+      let processedLabel = GmailApp.getUserLabelByName(this.config.labels.processed);
+      if (!processedLabel) {
+        Logger.log('Creating the processed label: ' + this.config.labels.processed);
+        processedLabel = GmailApp.createLabel(this.config.labels.processed);
+      }
+      thread.addLabel(processedLabel);
+    } catch (e) {
+      throw new GmailServiceError(`Failed to mark thread as processed: ${e.message}`);
+    }
+  }
+}
+
+// Service for handling transaction processing
+class TransactionProcessor extends ITransactionProcessor {
+  /**
+   * @param {IConfig} config
+   * @throws {TransactionProcessorError}
+   */
+  constructor(config) {
+    super();
+    if (!(config instanceof IConfig)) {
+      throw new TransactionProcessorError('Invalid config parameter');
+    }
+    this.config = config;
+  }
+
+  /**
+   * @param {string} emailBody
+   * @param {Object} userConfig
+   * @returns {Object|null}
+   * @throws {TransactionProcessorError}
+   */
+  identifyCard(emailBody, userConfig) {
+    if (!emailBody) {
+      throw new TransactionProcessorError('Email body cannot be empty');
+    }
+    if (!userConfig || !userConfig.cards) {
+      throw new TransactionProcessorError('Invalid userConfig');
+    }
+
+    try {
+      return userConfig.cards.find(card => 
+        this.config.regex.cardIdentifiers[card.lastFourDigits].test(emailBody)
+      );
+    } catch (e) {
+      throw new TransactionProcessorError(`Failed to identify card: ${e.message}`);
+    }
+  }
+
+  /**
+   * @param {string} emailBody
+   * @param {string} cardName
+   * @returns {Transaction[]}
+   * @throws {TransactionProcessorError}
+   */
+  extractTransactions(emailBody, cardName) {
+    if (!emailBody) {
+      throw new TransactionProcessorError('Email body cannot be empty');
+    }
+    if (!cardName) {
+      throw new TransactionProcessorError('Card name cannot be empty');
+    }
+
+    const transactions = [];
+    let match;
+    
+    try {
+      while ((match = this.config.regex.transaction.exec(emailBody)) !== null) {
+        const amount = this.parseAmount(match.groups.amount);
+        const transactionType = match.groups.transactionType;
+
+        transactions.push({
+          card: cardName,
+          amount: transactionType === this.config.transactionTypes.debit ? -amount : amount,
+          transactionType: transactionType,
+          date: this.parseDate(match.groups.date),
+          description: match.groups.description,
+          forexFees: match.groups.forexFees,
+          cashWithdrawalFees: match.groups.cashWithdrawalFees,
+        });
+      }
+      return transactions;
+    } catch (e) {
+      throw new TransactionProcessorError(`Failed to extract transactions: ${e.message}`);
+    }
+  }
+
+  /**
+   * @private
+   * @param {string} amountString
+   * @returns {number}
+   * @throws {TransactionProcessorError}
+   */
+  parseAmount(amountString) {
+    if (!amountString) {
+      throw new TransactionProcessorError('Amount string cannot be empty');
+    }
+    const amount = parseFloat(amountString.replace(',', '.'));
+    if (isNaN(amount)) {
+      throw new TransactionProcessorError('Invalid amount format');
+    }
+    return amount;
+  }
+
+  /**
+   * @private
+   * @param {string} dateString
+   * @returns {string}
+   * @throws {TransactionProcessorError}
+   */
+  parseDate(dateString) {
+    if (!dateString) {
+      throw new TransactionProcessorError('Date string cannot be empty');
+    }
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+      throw new TransactionProcessorError('Invalid date format');
+    }
+    return dateString;
+  }
+}
+
+// Configuration adapter for SheetsService
+class SheetsConfig extends ISheetsConfig {
+  /**
+   * @param {IConfig} config
+   */
+  constructor(config) {
+    super();
+    if (!(config instanceof IConfig)) {
+      throw new ConfigError('Invalid config parameter');
+    }
+    this._transactionTypes = config.transactionTypes;
+  }
+
+  get transactionTypes() { return this._transactionTypes; }
+}
+
+// Service for handling Google Sheets operations
+class SheetsService extends ISheetsService {
+  /**
+   * @param {string} spreadsheetId
+   * @param {ISheetsConfig} config
+   * @throws {SheetsServiceError}
+   */
+  constructor(spreadsheetId, config) {
+    super();
+    if (!spreadsheetId) {
+      throw new SheetsServiceError('Spreadsheet ID cannot be empty');
+    }
+    if (!(config instanceof ISheetsConfig)) {
+      throw new SheetsServiceError('Invalid config parameter');
+    }
+    this.spreadsheetId = spreadsheetId;
+    this.config = config;
+  }
+
+  /**
+   * @param {Transaction[]} transactions
+   * @param {string} sheetName
+   * @throws {SheetsServiceError}
+   */
+  addTransactionsToSheet(transactions, sheetName) {
+    if (!Array.isArray(transactions)) {
+      throw new SheetsServiceError('Transactions must be an array');
+    }
+    if (!sheetName) {
+      throw new SheetsServiceError('Sheet name cannot be empty');
+    }
+
+    try {
+      const spreadsheet = SpreadsheetApp.openById(this.spreadsheetId);
+      const sheet = spreadsheet.getSheetByName(sheetName);
+      
+      if (!sheet) {
+        throw new SheetsServiceError(`Sheet "${sheetName}" not found`);
       }
 
-      // Create transaction object
-      var transaction = {
-        card: cardName,
-        amount: amount,
-        transactionType: transactionType, // Store the type of transaction (credit/debit)
-        date: parseDate(match.groups.date), // Parse the date
-        description: match.groups.description,
-        forexFees: match.groups.forexFees,
-        cashWithdrawalFees: match.groups.cashWithdrawalFees,
-      };
-
-      // // Log the transaction object
-      // Logger.log('Extracted transaction: ' + JSON.stringify(transaction));
-
-      transactions.push(transaction);
-    }
-  } catch (e) {
-    Logger.log('Error while extracting transactions: ' + e.message);
-    throw e;
-  }
-  return transactions;
-}
-
-/**
- * Parses a locale-specific amount string (with comma or dot separator).
- */
-function parseAmount(amountString) {
-  try {
-    return parseFloat(amountString.replace(',', '.')); // Replace comma with dot and convert to float
-  } catch (e) {
-    Logger.log('Error while parsing amount: ' + e.message);
-    throw e;
-    // return 0; // Return 0 in case of an error
-  }
-}
-
-/**
- * Parses the date part (currently returns the string).
- */
-function parseDate(dateString) {
-  try {
-    return dateString; // For now, return the date string itself
-  } catch (e) {
-    Logger.log('Error while parsing date: ' + e.message);
-    throw e;
-    // return ''; // Return an empty string in case of an error
-  }
-}
-
-/**
- * Adds an array of transactions to the specified sheet in the configured spreadsheet.
- */
-function addTransactionsToSheet(transactions, sheetName) {
-  try {
-    var spreadsheet = SpreadsheetApp.openById(userConfig.spreadsheetId); // Get the spreadsheet by ID
-    var sheet = spreadsheet.getSheetByName(sheetName); // Get the sheet by name
-    
-    if (!sheet) {
-      throw new Error('Sheet "' + sheetName + '" not found.');
-    }
-
-    // Prepare the row data for all transactions
-    var rowsData = transactions.map(function(transaction) {
-      return [
+      const rowsData = transactions.map(transaction => [
         transaction.date,
         transaction.date,
         transaction.description,
         "",
-        transaction.transactionType == config.transactionTypes.credit ? "ΑΓΟΡΑ" : "ΠΛΗΡΩΜΗ",
+        transaction.transactionType === this.config.transactionTypes.credit ? "ΑΓΟΡΑ" : "ΠΛΗΡΩΜΗ",
         transaction.amount,
         transaction.forexFees,
         transaction.cashWithdrawalFees
-      ];
-    });
+      ]);
 
-    // Append all rows at once
-    sheet.getRange(sheet.getLastRow() + 1, 1, rowsData.length, rowsData[0].length).setValues(rowsData);
-    
-    // Logger.log('Transactions added to sheet.');
-  } catch (e) {
-    Logger.log('Error while adding transactions to sheet: ' + e.message);
-    throw e;
+      sheet.getRange(sheet.getLastRow() + 1, 1, rowsData.length, rowsData[0].length)
+        .setValues(rowsData);
+    } catch (e) {
+      throw new SheetsServiceError(`Failed to add transactions to sheet: ${e.message}`);
+    }
   }
 }
 
-/**
- * Marks the email as processed by adding the "processed" label.
- */
-function markThreadAsProcessed(thread) {
-  try {
-    let processedLabel = GmailApp.getUserLabelByName(config.labels.processed);
-    if (!processedLabel) {
-      Logger.log('Creating the processed label: ' + config.labels.processed);
-      processedLabel = GmailApp.createLabel(config.labels.processed); // Create the label if it doesn't exist
+// Main workflow orchestrator
+class WorkflowOrchestrator {
+  /**
+   * @param {IConfig} config
+   * @param {IGmailService} gmailService
+   * @param {ITransactionProcessor} transactionProcessor
+   * @param {ISheetsService} sheetsService
+   */
+  constructor(config, gmailService, transactionProcessor, sheetsService) {
+    // Validate dependencies
+    if (!(config instanceof IConfig)) {
+      throw new Error('Invalid config parameter');
+    }
+    if (!(gmailService instanceof IGmailService)) {
+      throw new Error('Invalid gmailService parameter');
+    }
+    if (!(transactionProcessor instanceof ITransactionProcessor)) {
+      throw new Error('Invalid transactionProcessor parameter');
+    }
+    if (!(sheetsService instanceof ISheetsService)) {
+      throw new Error('Invalid sheetsService parameter');
     }
 
-    thread.addLabel(processedLabel);
-    Logger.log('Thread marked as processed: ' + thread.getId());
+    this.config = config;
+    this.gmailService = gmailService;
+    this.transactionProcessor = transactionProcessor;
+    this.sheetsService = sheetsService;
+  }
+
+  /**
+   * @param {GmailMessage} message
+   * @param {Object} userConfig
+   * @private
+   */
+  processMessage(message, userConfig) {
+    const emailBody = message.getPlainBody();
+    const card = this.transactionProcessor.identifyCard(emailBody, userConfig);
+    
+    if (!card) {
+      throw new Error('No valid card identified in this email.');
+    }
+
+    Logger.log('Card identified: ' + card.name);
+    const transactions = this.transactionProcessor.extractTransactions(emailBody, card.name);
+    
+    if (transactions.length === 0) {
+      throw new Error('No transactions found in this email.');
+    }
+
+    Logger.log('Extracted ' + transactions.length + ' transactions.');
+    this.sheetsService.addTransactionsToSheet(transactions, card.sheetName);
+  }
+
+  /**
+   * @param {GmailThread} thread
+   * @param {Object} userConfig
+   * @private
+   */
+  processThread(thread, userConfig) {
+    const messages = thread.getMessages();
+    messages.forEach(message => {
+      try {
+        this.processMessage(message, userConfig);
+      } catch (e) {
+        Logger.log('Error processing message: ' + e.message);
+      }
+    });
+    this.gmailService.markThreadAsProcessed(thread);
+  }
+
+  /**
+   * @param {Object} userConfig
+   */
+  execute(userConfig) {
+    try {
+      Logger.log('Starting the email processing workflow...');
+      const threads = this.gmailService.getUnprocessedThreads();
+      Logger.log('Found ' + threads.length + ' email threads to process.');
+
+      threads.forEach(thread => this.processThread(thread, userConfig));
+      
+      Logger.log('Workflow completed successfully.');
+    } catch (e) {
+      Logger.log('Error in main execution: ' + e.message);
+      throw e;
+    }
+  }
+}
+
+// Main entry point
+function find_and_process_card_transaction_emails() {
+  try {
+    const config = new Config(userConfig);
+    const gmailService = new GmailService(config);
+    const transactionProcessor = new TransactionProcessor(config);
+    const sheetsConfig = new SheetsConfig(config);
+    const sheetsService = new SheetsService(userConfig.spreadsheetId, sheetsConfig);
+    
+    const orchestrator = new WorkflowOrchestrator(
+      config,
+      gmailService,
+      transactionProcessor,
+      sheetsService
+    );
+
+    orchestrator.execute(userConfig);
   } catch (e) {
-    Logger.log('Error while marking thread as processed: ' + e.message);
+    Logger.log(`Fatal error: ${e.name}: ${e.message}`);
     throw e;
   }
 }
