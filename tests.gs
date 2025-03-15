@@ -246,6 +246,19 @@ async function runTests() {
   };
 }
 
+// Export for Node.js environment while maintaining Google Apps Script compatibility
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    runTests,
+    TestSuite,
+    assertEquals,
+    assertThrows,
+    MockGmailApp,
+    MockSpreadsheetApp,
+    MockServices
+  };
+}
+
 /**
  * Creates a custom menu in Google Sheets for running tests
  */

@@ -515,3 +515,18 @@ function find_and_process_card_transaction_emails() {
     throw e;
   }
 }
+
+// Export for Node.js environment while maintaining Google Apps Script compatibility
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    Config,
+    ConfigError,
+    GmailService,
+    GmailServiceError,
+    TransactionProcessor,
+    TransactionProcessorError,
+    SheetsService,
+    SheetsServiceError,
+    SheetsConfig
+  };
+}
