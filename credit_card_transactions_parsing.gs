@@ -204,14 +204,20 @@ class WorkflowOrchestrator {
 
   processThread(thread, userConfig) {
     const messages = thread.getMessages();
-    messages.forEach(message => {
+    let allMessagesProcessed = true;
+
+    messages.forEach((message) => {
       try {
         this.processMessage(message, userConfig);
       } catch (e) {
         Logger.log('Error processing message: ' + e.message);
+        allMessagesProcessed = false;
       }
     });
-    this.gmailService.markThreadAsProcessed(thread);
+
+    if (allMessagesProcessed) {
+      this.gmailService.markThreadAsProcessed(thread);
+    }
   }
 
   execute(userConfig) {
