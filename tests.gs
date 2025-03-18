@@ -61,7 +61,7 @@ transactionProcessorTests.test('should identify card', () => {
   const appConfig = new AppConfig();
   const processor = new TransactionProcessor(appConfig);
   const card = processor.identifyCard(mockEmailBody, mockUserConfig);
-  assertEquals(card.lastFourDigits, '1234');
+  assertEquals(card.lastFourDigits, mockUserConfig.cards[0].lastFourDigits);
 });
 
 transactionProcessorTests.test('should extract transactions', () => {
