@@ -15,10 +15,12 @@ if (typeof require !== "undefined") {
   } = require("./test.mocks.gs");
   const {
     AppConfig,
+    GmailService,
     ServiceError,
     validateUserConfig,
     TransactionProcessor,
     SheetsService,
+    WorkflowOrchestrator,
   } = require("./credit_card_transactions_parsing.gs");
 
   Object.assign(global, {
@@ -32,10 +34,12 @@ if (typeof require !== "undefined") {
     mockUserConfig,
     mockEmailBody,
     AppConfig,
+    GmailService,
     ServiceError,
     validateUserConfig,
     TransactionProcessor,
     SheetsService,
+    WorkflowOrchestrator,
   });
 } else {
   // In Google Apps Script environment, these are already global
@@ -121,6 +125,47 @@ sheetsServiceTests.test("should add transactions to sheet", () => {
   service.addTransactionsToSheet(transactions, "Test Sheet");
 });
 
+// WorkflowOrchestrator Tests
+const workflowOrchestratorTests = new TestSuite("WorkflowOrchestrator Tests");
+
+workflowOrchestratorTests.beforeEach(() => {
+  MockServices.install();
+});
+
+workflowOrchestratorTests.test(
+  "should not mark thread as processed if email processing fails",
+  () => {
+    const appConfig = new AppConfig();
+    const gmailService = new GmailService(appConfig);
+    const transactionProcessor = new TransactionProcessor(appConfig);
+    const sheetsService = new SheetsService("123", appConfig);
+    const orchestrator = new WorkflowOrchestrator(
+      gmailService,
+      transactionProcessor,
+      sheetsService
+    );
+
+    const mockThread = {
+      getMessages: () => [
+        {
+          getPlainBody: () => {
+            throw new Error("Failed to get email body");
+          },
+        },
+      ],
+      addLabel: () => {
+        throw new Error("Thread should not be marked as processed");
+      },
+    };
+
+    try {
+      orchestrator.processThread(mockThread, mockUserConfig);
+    } catch (e) {
+      assertEquals(e.message, "Failed to get email body");
+    }
+  }
+);
+
 // Run tests in Google Apps Script environment
 function runAllTests() {
   const suites = [
@@ -128,6 +173,7 @@ function runAllTests() {
     validationTests,
     transactionProcessorTests,
     sheetsServiceTests,
+    workflowOrchestratorTests, // Add the new test suite here
   ];
 
   return runTests(suites);
