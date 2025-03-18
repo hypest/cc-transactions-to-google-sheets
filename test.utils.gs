@@ -65,7 +65,7 @@ function assertThrowsUtil(fn, errorType, message) {
 }
 
 // Run all test suites
-async function runTestSuites(suites) {
+async function runTests(suites) {
   let totalPassed = 0;
   let totalFailed = 0;
   let output = [];
@@ -100,6 +100,6 @@ if (typeof module !== 'undefined' && module.exports) {
     TestSuite,
     assertEquals: assertEqualsUtil,
     assertThrows: assertThrowsUtil,
-    runTests: runTestSuites
+    runTests
   };
 } 

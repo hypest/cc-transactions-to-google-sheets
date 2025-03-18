@@ -17,7 +17,7 @@ const MockSpreadsheetAppSample = {
 };
 
 // Mock service manager
-const MockServicesSample = {
+const MockServices = {
   _originalServices: {},
   
   backup() {
@@ -64,7 +64,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     MockGmailApp: MockGmailAppSample,
     MockSpreadsheetApp: MockSpreadsheetAppSample,
-    MockServices: MockServicesSample,
+    MockServices,
     mockUserConfig: mockUserConfigSample,
     mockEmailBody: mockEmailBodySample
   };
