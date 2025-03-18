@@ -4,8 +4,8 @@
   "description": "Credit card transactions to Google Sheets",
   "main": "code.js",
   "scripts": {
-    "test": "node test.local.js",
-    "test:debug": "node --inspect-brk test.local.js"
+    "test": "node test.node.js",
+    "test:debug": "node --inspect-brk test.node.js"
   },
   "type": "commonjs"
 } 

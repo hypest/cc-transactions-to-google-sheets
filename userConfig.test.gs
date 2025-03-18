@@ -3,7 +3,7 @@
  * This file is used by the test suite to verify the code functionality
  */
 
-const userConfig = {
+const userConfigSample = {
   cards: [
     {
       name: "Test Visa Card",
@@ -21,5 +21,5 @@ const userConfig = {
 
 // Export for Node.js environment
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = userConfig;
+  module.exports = userConfigSample;
 } 

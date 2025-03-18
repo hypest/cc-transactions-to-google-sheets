@@ -1,162 +1,52 @@
-// Mock Google Services
-const MockGmailApp = {
-  search: () => [],
-  getUserLabelByName: () => null,
-  createLabel: () => ({ addToThread: () => {} })
-};
+// Import test utilities and mocks for Node.js environment
+if (typeof require !== 'undefined') {
+  const { TestSuite, assertEquals, assertThrows, runTests } = require('./test.utils.gs');
+  const { MockGmailApp, MockSpreadsheetApp, MockServices, mockUserConfig, mockEmailBody } = require('./test.mocks.gs');
+  const { AppConfig, ServiceError, validateUserConfig, TransactionProcessor, SheetsService } = require('./credit_card_transactions_parsing.gs');
 
-const MockSpreadsheetApp = {
-  openById: () => ({
-    getSheetByName: (name) => ({
-      getLastRow: () => 1,
-      getRange: (row, col, numRows, numCols) => ({
-        setValues: (values) => {}
-      })
-    })
-  })
-};
-
-// Mock service manager
-const MockServices = {
-  _originalServices: {},
-  
-  backup() {
-    this._originalServices.GmailApp = GmailApp;
-    this._originalServices.SpreadsheetApp = SpreadsheetApp;
-  },
-
-  install() {
-    // Save originals first
-    this.backup();
-    
-    // Install mocks
-    GmailApp = MockGmailApp;
-    SpreadsheetApp = MockSpreadsheetApp;
-  },
-
-  restore() {
-    // Restore original services
-    GmailApp = this._originalServices.GmailApp;
-    SpreadsheetApp = this._originalServices.SpreadsheetApp;
-  }
-};
-
-// Simple test framework
-class TestSuite {
-  constructor(name) {
-    this.name = name;
-    this.tests = [];
-    this.beforeEachFn = null;
-  }
-
-  beforeEach(fn) {
-    this.beforeEachFn = fn;
-  }
-
-  test(name, fn) {
-    this.tests.push({ name, fn, passed: false, error: null });
-  }
-
-  async run() {
-    console.log(`\nRunning ${this.name}:`);
-    let passed = 0;
-    let failed = 0;
-
-    for (const test of this.tests) {
-      if (this.beforeEachFn) {
-        await this.beforeEachFn();
-      }
-
-      try {
-        await test.fn();
-        test.passed = true;
-        console.log(`✓ ${test.name}`);
-        passed++;
-      } catch (e) {
-        test.passed = false;
-        test.error = e.message;
-        console.log(`✗ ${test.name}`);
-        console.log(`  Error: ${e.message}`);
-        failed++;
-      }
-    }
-
-    console.log(`\nResults: ${passed} passed, ${failed} failed`);
-    return { passed, failed };
-  }
+  Object.assign(global, {
+    TestSuite,
+    assertEquals,
+    assertThrows,
+    runTests,
+    MockGmailApp,
+    MockSpreadsheetApp,
+    MockServices,
+    mockUserConfig,
+    mockEmailBody,
+    AppConfig,
+    ServiceError,
+    validateUserConfig,
+    TransactionProcessor,
+    SheetsService,
+  });
+} else {
+  // In Google Apps Script environment, these are already global
+  // The mock services are defined below
 }
 
-// Test helpers
-function assertEquals(actual, expected) {
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`Expected ${JSON.stringify(expected)} but got ${JSON.stringify(actual)}`);
-  }
-}
+// AppConfig Tests
+const appConfigTests = new TestSuite('AppConfig Tests');
 
-function assertThrows(fn, errorType, message) {
-  try {
-    fn();
-    throw new Error('Expected function to throw');
-  } catch (e) {
-    if (!(e instanceof errorType)) {
-      throw new Error(`Expected error of type ${errorType.name} but got ${e.constructor.name}`);
-    }
-    if (message && e.message !== message) {
-      throw new Error(`Expected error message "${message}" but got "${e.message}"`);
-    }
-  }
-}
-
-// Mock data
-const mockUserConfig = {
-  spreadsheetId: '123',
-  cards: [
-    {
-      lastFourDigits: '1234',
-      name: 'Test Card',
-      sheetName: 'Test Sheet'
-    }
-  ]
-};
-
-const mockEmailBody = `
-Σύνολο Κινήσεων Κάρτας **1234
-ΧΡΕΩΣΗ 50,00 Ημ/νία: 01/01/2024 Αιτιολογία: Test Purchase Έξοδα Συναλλάγματος: 0,00 Έξοδα Ανάληψης Μετρητών: 0,00
-ΠΙΣΤΩΣΗ 25,00 Ημ/νία: 02/01/2024 Αιτιολογία: Test Refund Έξοδα Συναλλάγματος: 0,00 Έξοδα Ανάληψης Μετρητών: 0,00
-`;
-
-// Config Tests
-const configTests = new TestSuite('Config Tests');
-
-configTests.test('should create valid config', () => {
-  const config = new Config(mockUserConfig);
-  assertEquals(config.labels.primary, 'cc_transactions_report');
-  assertEquals(config.transactionTypes.credit, 'ΧΡΕΩΣΗ');
-  assertEquals(Object.keys(config.regex.cardIdentifiers).length, 1);
+appConfigTests.test('should create valid app config', () => {
+  const appConfig = new AppConfig();
+  assertEquals(appConfig.labels.primary, 'cc_transactions_report');
+  assertEquals(appConfig.transactionTypes.credit, 'ΧΡΕΩΣΗ');
 });
 
-configTests.test('should throw on invalid user config', () => {
+// User Config Validation Tests
+const validationTests = new TestSuite('User Config Validation Tests');
+
+validationTests.test('should validate correct user config', () => {
+  // Should not throw
+  validateUserConfig(mockUserConfig);
+});
+
+validationTests.test('should throw on invalid user config', () => {
   assertThrows(
-    () => new Config(null),
-    ConfigError,
-    'userConfig is required'
-  );
-});
-
-// SheetsConfig Tests
-const sheetsConfigTests = new TestSuite('SheetsConfig Tests');
-
-sheetsConfigTests.test('should create valid sheets config', () => {
-  const config = new Config(mockUserConfig);
-  const sheetsConfig = new SheetsConfig(config);
-  assertEquals(sheetsConfig.transactionTypes, config.transactionTypes);
-});
-
-sheetsConfigTests.test('should throw on invalid config', () => {
-  assertThrows(
-    () => new SheetsConfig(null),
-    ConfigError,
-    'Invalid config parameter'
+    () => validateUserConfig(null),
+    ServiceError,
+    'Config: userConfig.cards must be a non-empty array'
   );
 });
 
@@ -164,19 +54,20 @@ sheetsConfigTests.test('should throw on invalid config', () => {
 const transactionProcessorTests = new TestSuite('TransactionProcessor Tests');
 
 transactionProcessorTests.beforeEach(() => {
-  GmailApp = MockGmailApp;
+  MockServices.install();
 });
 
 transactionProcessorTests.test('should identify card', () => {
-  const config = new Config(mockUserConfig);
-  const processor = new TransactionProcessor(config);
+  const appConfig = new AppConfig();
+  const processor = new TransactionProcessor(appConfig);
   const card = processor.identifyCard(mockEmailBody, mockUserConfig);
   assertEquals(card.lastFourDigits, '1234');
 });
 
 transactionProcessorTests.test('should extract transactions', () => {
-  const config = new Config(mockUserConfig);
-  const processor = new TransactionProcessor(config);
+  const appConfig = new AppConfig();
+  const processor = new TransactionProcessor(appConfig);
+  processor.initializeRegex(mockUserConfig);
   const transactions = processor.extractTransactions(mockEmailBody, 'Test Card');
   
   assertEquals(transactions.length, 2);
@@ -188,19 +79,18 @@ transactionProcessorTests.test('should extract transactions', () => {
 const sheetsServiceTests = new TestSuite('SheetsService Tests');
 
 sheetsServiceTests.beforeEach(() => {
-  SpreadsheetApp = MockSpreadsheetApp;
+  MockServices.install();
 });
 
 sheetsServiceTests.test('should add transactions to sheet', () => {
-  const config = new Config(mockUserConfig);
-  const sheetsConfig = new SheetsConfig(config);
-  const service = new SheetsService(mockUserConfig.spreadsheetId, sheetsConfig);
+  const appConfig = new AppConfig();
+  const service = new SheetsService('123', appConfig);
   
   const transactions = [{
     date: '01/01/2024',
     description: 'Test',
     amount: 100,
-    transactionType: config.transactionTypes.credit,
+    transactionType: appConfig.transactionTypes.credit,
     forexFees: '0,00',
     cashWithdrawalFees: '0,00'
   }];
@@ -209,84 +99,45 @@ sheetsServiceTests.test('should add transactions to sheet', () => {
   service.addTransactionsToSheet(transactions, 'Test Sheet');
 });
 
-// Run all tests
-async function runTests() {
+// Run tests in Google Apps Script environment
+function runAllTests() {
   const suites = [
-    configTests,
-    sheetsConfigTests,
+    appConfigTests,
+    validationTests,
     transactionProcessorTests,
     sheetsServiceTests
   ];
-
-  let totalPassed = 0;
-  let totalFailed = 0;
-  let output = [];
-
-  for (const suite of suites) {
-    const results = await suite.run();
-    totalPassed += results.passed;
-    totalFailed += results.failed;
-    
-    // Collect output for display
-    output.push(`${suite.name}:`);
-    suite.tests.forEach(test => {
-      output.push(`  ${test.passed ? '✓' : '✗'} ${test.name}`);
-      if (test.error) {
-        output.push(`    Error: ${test.error}`);
-      }
-    });
-    output.push('');
-  }
-
-  output.push(`Total Results: ${totalPassed} passed, ${totalFailed} failed`);
-  return {
-    output: output.join('\n'),
-    passed: totalPassed,
-    failed: totalFailed
-  };
-}
-
-// Export for Node.js environment while maintaining Google Apps Script compatibility
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    runTests,
-    TestSuite,
-    assertEquals,
-    assertThrows,
-    MockGmailApp,
-    MockSpreadsheetApp,
-    MockServices
-  };
-}
-
-/**
- * Creates a custom menu in Google Sheets for running tests
- */
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Tests')
-    .addItem('Run All Tests', 'showTestResults')
-    .addToUi();
-}
-
-/**
- * Runs the tests and displays results in a modal dialog
- */
-function showTestResults() {
-  const ui = SpreadsheetApp.getUi();
   
-  // Show "Running tests" message
-  ui.alert('Tests', 'Running tests...', ui.ButtonSet.OK);
-  
+  return runTests(suites);
+}
+
+// Function to install mocks and run tests
+function runTestsWithMocks() {
   try {
     // Install mocks
     MockServices.install();
     
     // Run tests
-    runTests().then(results => {
+    return runAllTests().finally(() => {
       // Restore original services
       MockServices.restore();
-      
+    });
+  } catch (e) {
+    // Restore original services in case of error
+    MockServices.restore();
+    throw e;
+  }
+}
+
+// Function to run tests and show results in the UI
+function runTestsAndShowResults() {
+  const ui = SpreadsheetApp.getUi();
+
+  // Show "Running tests" message
+  ui.alert("Tests", "Running tests...", ui.ButtonSet.OK);
+
+  runTestsWithMocks()
+    .then((results) => {
       // Show results
       const title = `Test Results: ${results.passed} passed, ${results.failed} failed`;
       ui.alert(title, results.output, ui.ButtonSet.OK);
@@ -295,9 +146,20 @@ function showTestResults() {
       MockServices.restore();
       ui.alert('Error', `Failed to run tests: ${e.message}`, ui.ButtonSet.OK);
     });
-  } catch (e) {
-    // Restore original services
-    MockServices.restore();
-    ui.alert('Error', `Failed to run tests: ${e.message}`, ui.ButtonSet.OK);
-  }
+}
+
+// Google Apps Script UI functions
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu("Tests")
+    .addItem("Run All Tests", "runTestsAndShowResults")
+    .addToUi();
+}
+
+// Export for Node.js environment
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    runAllTests,
+    runTestsWithMocks,
+  };
 } 
