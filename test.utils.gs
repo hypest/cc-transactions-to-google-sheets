@@ -44,13 +44,13 @@ class TestSuite {
 }
 
 // Test helpers
-function assertEqualsUtil(actual, expected) {
+function assertEquals(actual, expected) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(`Expected ${JSON.stringify(expected)} but got ${JSON.stringify(actual)}`);
   }
 }
 
-function assertThrowsUtil(fn, errorType, message) {
+function assertThrows(fn, errorType, message) {
   try {
     fn();
     throw new Error('Expected function to throw');
@@ -98,8 +98,8 @@ async function runTests(suites) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     TestSuite,
-    assertEquals: assertEqualsUtil,
-    assertThrows: assertThrowsUtil,
+    assertEquals,
+    assertThrows,
     runTests
   };
 } 

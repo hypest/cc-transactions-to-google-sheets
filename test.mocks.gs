@@ -1,11 +1,11 @@
 // Mock Google Services
-const MockGmailAppSample = {
+const MockGmailApp = {
   search: () => [],
   getUserLabelByName: () => null,
   createLabel: () => ({ addToThread: () => {} })
 };
 
-const MockSpreadsheetAppSample = {
+const MockSpreadsheetApp = {
   openById: () => ({
     getSheetByName: (name) => ({
       getLastRow: () => 1,
@@ -30,8 +30,8 @@ const MockServices = {
     this.backup();
     
     // Install mocks
-    GmailApp = MockGmailAppSample;
-    SpreadsheetApp = MockSpreadsheetAppSample;
+    GmailApp = MockGmailApp;
+    SpreadsheetApp = MockSpreadsheetApp;
   },
 
   restore() {
@@ -42,7 +42,7 @@ const MockServices = {
 };
 
 // Mock test data
-const mockUserConfigSample = {
+const mockUserConfig = {
   spreadsheetId: '123',
   cards: [
     {
@@ -53,7 +53,7 @@ const mockUserConfigSample = {
   ]
 };
 
-const mockEmailBodySample = `
+const mockEmailBody = `
 Σύνολο Κινήσεων Κάρτας **1234
 ΧΡΕΩΣΗ 50,00 Ημ/νία: 01/01/2024 Αιτιολογία: Test Purchase Έξοδα Συναλλάγματος: 0,00 Έξοδα Ανάληψης Μετρητών: 0,00
 ΠΙΣΤΩΣΗ 25,00 Ημ/νία: 02/01/2024 Αιτιολογία: Test Refund Έξοδα Συναλλάγματος: 0,00 Έξοδα Ανάληψης Μετρητών: 0,00
@@ -62,10 +62,10 @@ const mockEmailBodySample = `
 // Export for Node.js environment while maintaining Google Apps Script compatibility
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    MockGmailApp: MockGmailAppSample,
-    MockSpreadsheetApp: MockSpreadsheetAppSample,
+    MockGmailApp,
+    MockSpreadsheetApp,
     MockServices,
-    mockUserConfig: mockUserConfigSample,
-    mockEmailBody: mockEmailBodySample
+    mockUserConfig,
+    mockEmailBody
   };
 } 
