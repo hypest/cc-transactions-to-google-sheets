@@ -246,6 +246,13 @@ function find_and_process_card_transaction_emails() {
       sheetsService
     );
 
+    // load user config from Script Properties service if not otherwise defined
+    if (typeof userConfig !== "undefined") {
+      const scriptProperties = PropertiesService.getScriptProperties();
+      const userConfigString = scriptProperties.getProperty("userConfig");
+      userConfig = JSON.parse(userConfigString);
+    }
+
     orchestrator.execute(userConfig);
   } catch (e) {
     Logger.log(`Fatal error: ${e.name}: ${e.message}`);
