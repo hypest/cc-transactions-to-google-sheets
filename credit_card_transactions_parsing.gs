@@ -8,7 +8,7 @@ class ServiceError extends Error {
 }
 
 // Application-wide constants
-class AppConfigClass {
+class AppConfig {
   constructor() {
     this.labels = {
       primary: 'cc_transactions_report',
@@ -25,7 +25,7 @@ class AppConfigClass {
 // Service for handling Gmail operations
 class GmailService {
   constructor(appConfig) {
-    if (!(appConfig instanceof AppConfigClass)) {
+    if (!(appConfig instanceof AppConfig)) {
       throw new ServiceError('Gmail', 'Invalid app config');
     }
     this.appConfig = appConfig;
@@ -56,7 +56,7 @@ class GmailService {
 // Service for handling transaction processing
 class TransactionProcessor {
   constructor(appConfig) {
-    if (!(appConfig instanceof AppConfigClass)) {
+    if (!(appConfig instanceof AppConfig)) {
       throw new ServiceError('Processor', 'Invalid app config');
     }
     this.appConfig = appConfig;
@@ -136,7 +136,7 @@ class SheetsService {
     if (!spreadsheetId) {
       throw new ServiceError('Sheets', 'Spreadsheet ID is required');
     }
-    if (!(appConfig instanceof AppConfigClass)) {
+    if (!(appConfig instanceof AppConfig)) {
       throw new ServiceError('Sheets', 'Invalid app config');
     }
     this.spreadsheetId = spreadsheetId;
@@ -241,7 +241,7 @@ function find_and_process_card_transaction_emails() {
   try {
     validateUserConfig(userConfig);
     
-    const appConfig = new AppConfigClass();
+    const appConfig = new AppConfig();
     const gmailService = new GmailService(appConfig);
     const transactionProcessor = new TransactionProcessor(appConfig);
     const sheetsService = new SheetsService(userConfig.spreadsheetId, appConfig);
@@ -282,7 +282,7 @@ function validateUserConfig(userConfig) {
 // Export for Node.js environment while maintaining Google Apps Script compatibility
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    AppConfig: AppConfigClass,
+    AppConfig,
     GmailService,
     TransactionProcessor,
     SheetsService,
