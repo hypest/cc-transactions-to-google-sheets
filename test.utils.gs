@@ -46,20 +46,26 @@ class TestSuite {
 // Test helpers
 function assertEquals(actual, expected) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`Expected ${JSON.stringify(expected)} but got ${JSON.stringify(actual)}`);
+    throw new Error(
+      `Expected ${JSON.stringify(expected)} but got ${JSON.stringify(actual)}`
+    );
   }
 }
 
 function assertThrows(fn, errorType, message) {
   try {
     fn();
-    throw new Error('Expected function to throw');
+    throw new Error("Expected function to throw");
   } catch (e) {
     if (!(e instanceof errorType)) {
-      throw new Error(`Expected error of type ${errorType.name} but got ${e.constructor.name}`);
+      throw new Error(
+        `Expected error of type ${errorType.name} but got ${e.constructor.name}`
+      );
     }
     if (message && e.message !== message) {
-      throw new Error(`Expected error message "${message}" but got "${e.message}"`);
+      throw new Error(
+        `Expected error message "${message}" but got "${e.message}"`
+      );
     }
   }
 }
@@ -74,32 +80,32 @@ async function runTests(suites) {
     const results = await suite.run();
     totalPassed += results.passed;
     totalFailed += results.failed;
-    
+
     // Collect output for display
     output.push(`${suite.name}:`);
-    suite.tests.forEach(test => {
-      output.push(`  ${test.passed ? '✓' : '✗'} ${test.name}`);
+    suite.tests.forEach((test) => {
+      output.push(`  ${test.passed ? "✓" : "✗"} ${test.name}`);
       if (test.error) {
         output.push(`    Error: ${test.error}`);
       }
     });
-    output.push('');
+    output.push("");
   }
 
   output.push(`Total Results: ${totalPassed} passed, ${totalFailed} failed`);
   return {
-    output: output.join('\n'),
+    output: output.join("\n"),
     passed: totalPassed,
-    failed: totalFailed
+    failed: totalFailed,
   };
 }
 
 // Export for Node.js environment while maintaining Google Apps Script compatibility
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     TestSuite,
     assertEquals,
     assertThrows,
-    runTests
+    runTests,
   };
-} 
+}

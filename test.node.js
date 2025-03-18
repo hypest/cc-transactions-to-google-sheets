@@ -1,13 +1,13 @@
 // Mock Google Apps Script global objects and classes
 global.Logger = {
-  log: (...args) => console.log(...args)
+  log: (...args) => console.log(...args),
 };
 
 // Mock Google Apps Script services
 global.GmailApp = {
   search: () => [],
   getUserLabelByName: () => null,
-  createLabel: () => ({ addToThread: () => {} })
+  createLabel: () => ({ addToThread: () => {} }),
 };
 
 global.SpreadsheetApp = {
@@ -15,20 +15,20 @@ global.SpreadsheetApp = {
     getSheetByName: (name) => ({
       getLastRow: () => 1,
       getRange: (row, col, numRows, numCols) => ({
-        setValues: (values) => {}
-      })
-    })
-  })
+        setValues: (values) => {},
+      }),
+    }),
+  }),
 };
 
 debugger; // Break before loading dependencies
 
 // Import the test configuration
-const userConfig = require('./userConfig.test.gs');
+const userConfig = require("./userConfig.test.gs");
 global.userConfig = userConfig;
 
 // Import the tests and run them
-const { runAllTests } = require('./tests.gs');
+const { runAllTests } = require("./tests.gs");
 
 debugger; // Break before running tests
 
@@ -39,7 +39,7 @@ debugger; // Break before running tests
     console.log(results.output);
     process.exit(results.failed > 0 ? 1 : 0);
   } catch (error) {
-    console.error('Error running tests:', error);
+    console.error("Error running tests:", error);
     process.exit(1);
   }
-})(); 
+})();

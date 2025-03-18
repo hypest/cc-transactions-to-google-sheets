@@ -14,12 +14,12 @@ const userConfigSample = {
       name: "Test Mastercard",
       lastFourDigits: "2222",
       sheetName: "Test Mastercard",
-    }
+    },
   ],
   spreadsheetId: "test_spreadsheet_id",
 };
 
 // Export for Node.js environment
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== "undefined" && module.exports) {
   module.exports = userConfigSample;
-} 
+}

@@ -2,7 +2,7 @@
 class ServiceError extends Error {
   constructor(service, message) {
     super(`${service}: ${message}`);
-    this.name = 'ServiceError';
+    this.name = "ServiceError";
     this.service = service;
   }
 }
@@ -11,13 +11,13 @@ class ServiceError extends Error {
 class AppConfig {
   constructor() {
     this.labels = {
-      primary: 'cc_transactions_report',
-      processed: 'auto_cc_report_processed',
+      primary: "cc_transactions_report",
+      processed: "auto_cc_report_processed",
     };
-    
+
     this.transactionTypes = {
-      credit: 'ΧΡΕΩΣΗ',
-      debit: 'ΠΙΣΤΩΣΗ',
+      credit: "ΧΡΕΩΣΗ",
+      debit: "ΠΙΣΤΩΣΗ",
     };
   }
 }
@@ -26,29 +26,44 @@ class AppConfig {
 class GmailService {
   constructor(appConfig) {
     if (!(appConfig instanceof AppConfig)) {
-      throw new ServiceError('Gmail', 'Invalid app config');
+      throw new ServiceError("Gmail", "Invalid app config");
     }
     this.appConfig = appConfig;
   }
 
   getUnprocessedThreads() {
     try {
-      return GmailApp.search('label:' + this.appConfig.labels.primary + ' -label:' + this.appConfig.labels.processed);
+      return GmailApp.search(
+        "label:" +
+          this.appConfig.labels.primary +
+          " -label:" +
+          this.appConfig.labels.processed
+      );
     } catch (e) {
-      throw new ServiceError('Gmail', `Failed to fetch unprocessed threads: ${e.message}`);
+      throw new ServiceError(
+        "Gmail",
+        `Failed to fetch unprocessed threads: ${e.message}`
+      );
     }
   }
 
   markThreadAsProcessed(thread) {
     try {
-      let processedLabel = GmailApp.getUserLabelByName(this.appConfig.labels.processed);
+      let processedLabel = GmailApp.getUserLabelByName(
+        this.appConfig.labels.processed
+      );
       if (!processedLabel) {
-        Logger.log('Creating the processed label: ' + this.appConfig.labels.processed);
+        Logger.log(
+          "Creating the processed label: " + this.appConfig.labels.processed
+        );
         processedLabel = GmailApp.createLabel(this.appConfig.labels.processed);
       }
       thread.addLabel(processedLabel);
     } catch (e) {
-      throw new ServiceError('Gmail', `Failed to mark thread as processed: ${e.message}`);
+      throw new ServiceError(
+        "Gmail",
+        `Failed to mark thread as processed: ${e.message}`
+      );
     }
   }
 }
@@ -57,7 +72,7 @@ class GmailService {
 class TransactionProcessor {
   constructor(appConfig) {
     if (!(appConfig instanceof AppConfig)) {
-      throw new ServiceError('Processor', 'Invalid app config');
+      throw new ServiceError("Processor", "Invalid app config");
     }
     this.appConfig = appConfig;
     this.cardIdentifiers = {};
@@ -65,26 +80,28 @@ class TransactionProcessor {
   }
 
   initializeRegex(userConfig) {
-    const prefix = 'Σύνολο Κινήσεων Κάρτας \\*\\*';
-    
+    const prefix = "Σύνολο Κινήσεων Κάρτας \\*\\*";
+
     // Initialize card identifier patterns
-    userConfig.cards.forEach(card => {
-      this.cardIdentifiers[card.lastFourDigits] = new RegExp(`${prefix}${card.lastFourDigits}`);
+    userConfig.cards.forEach((card) => {
+      this.cardIdentifiers[card.lastFourDigits] = new RegExp(
+        `${prefix}${card.lastFourDigits}`
+      );
     });
 
     // Define the transaction regex
     this.transactionRegex = new RegExp(
       `(?<transactionType>${this.appConfig.transactionTypes.credit}|${this.appConfig.transactionTypes.debit})\\s` +
-      `(?<amount>[\\d,]+)\\sΗμ\\/νία:\\s(?<date>\\d{2}\\/\\d{2}\\/\\d{4})\\s` +
-      `Αιτιολογία:\\s(?<description>.+?)\\sΈξοδα[\\s\\n]+?Συναλλάγματος:\\s` +
-      `(?<forexFees>[\\d,]+)\\sΈξοδα\\sΑνάληψης\\sΜετρητών:\\s(?<cashWithdrawalFees>[\\d,]+)`,
-      'g'
+        `(?<amount>[\\d,]+)\\sΗμ\\/νία:\\s(?<date>\\d{2}\\/\\d{2}\\/\\d{4})\\s` +
+        `Αιτιολογία:\\s(?<description>.+?)\\sΈξοδα[\\s\\n]+?Συναλλάγματος:\\s` +
+        `(?<forexFees>[\\d,]+)\\sΈξοδα\\sΑνάληψης\\sΜετρητών:\\s(?<cashWithdrawalFees>[\\d,]+)`,
+      "g"
     );
   }
 
   identifyCard(emailBody, userConfig) {
     if (!emailBody || !userConfig?.cards) {
-      throw new ServiceError('Processor', 'Invalid email body or user config');
+      throw new ServiceError("Processor", "Invalid email body or user config");
     }
 
     if (!this.transactionRegex) {
@@ -92,30 +109,39 @@ class TransactionProcessor {
     }
 
     try {
-      return userConfig.cards.find(card => 
+      return userConfig.cards.find((card) =>
         this.cardIdentifiers[card.lastFourDigits].test(emailBody)
       );
     } catch (e) {
-      throw new ServiceError('Processor', `Failed to identify card: ${e.message}`);
+      throw new ServiceError(
+        "Processor",
+        `Failed to identify card: ${e.message}`
+      );
     }
   }
 
   extractTransactions(emailBody, cardName) {
     if (!emailBody || !cardName) {
-      throw new ServiceError('Processor', 'Email body and card name are required');
+      throw new ServiceError(
+        "Processor",
+        "Email body and card name are required"
+      );
     }
 
     const transactions = [];
     let match;
-    
+
     try {
       while ((match = this.transactionRegex.exec(emailBody)) !== null) {
-        const amount = parseFloat(match.groups.amount.replace(',', '.'));
+        const amount = parseFloat(match.groups.amount.replace(",", "."));
         const transactionType = match.groups.transactionType;
 
         transactions.push({
           card: cardName,
-          amount: transactionType === this.appConfig.transactionTypes.debit ? -amount : amount,
+          amount:
+            transactionType === this.appConfig.transactionTypes.debit
+              ? -amount
+              : amount,
           transactionType,
           date: match.groups.date,
           description: match.groups.description,
@@ -125,7 +151,10 @@ class TransactionProcessor {
       }
       return transactions;
     } catch (e) {
-      throw new ServiceError('Processor', `Failed to extract transactions: ${e.message}`);
+      throw new ServiceError(
+        "Processor",
+        `Failed to extract transactions: ${e.message}`
+      );
     }
   }
 }
@@ -134,10 +163,10 @@ class TransactionProcessor {
 class SheetsService {
   constructor(spreadsheetId, appConfig) {
     if (!spreadsheetId) {
-      throw new ServiceError('Sheets', 'Spreadsheet ID is required');
+      throw new ServiceError("Sheets", "Spreadsheet ID is required");
     }
     if (!(appConfig instanceof AppConfig)) {
-      throw new ServiceError('Sheets', 'Invalid app config');
+      throw new ServiceError("Sheets", "Invalid app config");
     }
     this.spreadsheetId = spreadsheetId;
     this.appConfig = appConfig;
@@ -145,32 +174,43 @@ class SheetsService {
 
   addTransactionsToSheet(transactions, sheetName) {
     if (!Array.isArray(transactions) || !sheetName) {
-      throw new ServiceError('Sheets', 'Invalid transactions or sheet name');
+      throw new ServiceError("Sheets", "Invalid transactions or sheet name");
     }
 
     try {
       const spreadsheet = SpreadsheetApp.openById(this.spreadsheetId);
       const sheet = spreadsheet.getSheetByName(sheetName);
-      
+
       if (!sheet) {
-        throw new ServiceError('Sheets', `Sheet "${sheetName}" not found`);
+        throw new ServiceError("Sheets", `Sheet "${sheetName}" not found`);
       }
 
-      const rowsData = transactions.map(transaction => [
+      const rowsData = transactions.map((transaction) => [
         transaction.date,
         transaction.date,
         transaction.description,
         "",
-        transaction.transactionType === this.appConfig.transactionTypes.credit ? "ΑΓΟΡΑ" : "ΠΛΗΡΩΜΗ",
+        transaction.transactionType === this.appConfig.transactionTypes.credit
+          ? "ΑΓΟΡΑ"
+          : "ΠΛΗΡΩΜΗ",
         transaction.amount,
         transaction.forexFees,
-        transaction.cashWithdrawalFees
+        transaction.cashWithdrawalFees,
       ]);
 
-      sheet.getRange(sheet.getLastRow() + 1, 1, rowsData.length, rowsData[0].length)
+      sheet
+        .getRange(
+          sheet.getLastRow() + 1,
+          1,
+          rowsData.length,
+          rowsData[0].length
+        )
         .setValues(rowsData);
     } catch (e) {
-      throw new ServiceError('Sheets', `Failed to add transactions: ${e.message}`);
+      throw new ServiceError(
+        "Sheets",
+        `Failed to add transactions: ${e.message}`
+      );
     }
   }
 }
@@ -186,19 +226,25 @@ class WorkflowOrchestrator {
   processMessage(message, userConfig) {
     const emailBody = message.getPlainBody();
     const card = this.transactionProcessor.identifyCard(emailBody, userConfig);
-    
+
     if (!card) {
-      throw new ServiceError('Workflow', 'No valid card identified in this email');
+      throw new ServiceError(
+        "Workflow",
+        "No valid card identified in this email"
+      );
     }
 
-    Logger.log('Card identified: ' + card.name);
-    const transactions = this.transactionProcessor.extractTransactions(emailBody, card.name);
-    
+    Logger.log("Card identified: " + card.name);
+    const transactions = this.transactionProcessor.extractTransactions(
+      emailBody,
+      card.name
+    );
+
     if (transactions.length === 0) {
-      throw new ServiceError('Workflow', 'No transactions found in this email');
+      throw new ServiceError("Workflow", "No transactions found in this email");
     }
 
-    Logger.log('Extracted ' + transactions.length + ' transactions');
+    Logger.log("Extracted " + transactions.length + " transactions");
     this.sheetsService.addTransactionsToSheet(transactions, card.sheetName);
   }
 
@@ -210,7 +256,7 @@ class WorkflowOrchestrator {
       try {
         this.processMessage(message, userConfig);
       } catch (e) {
-        Logger.log('Error processing message: ' + e.message);
+        Logger.log("Error processing message: " + e.message);
         allMessagesProcessed = false;
       }
     });
@@ -222,15 +268,15 @@ class WorkflowOrchestrator {
 
   execute(userConfig) {
     try {
-      Logger.log('Starting the email processing workflow...');
+      Logger.log("Starting the email processing workflow...");
       const threads = this.gmailService.getUnprocessedThreads();
-      Logger.log('Found ' + threads.length + ' email threads to process');
+      Logger.log("Found " + threads.length + " email threads to process");
 
-      threads.forEach(thread => this.processThread(thread, userConfig));
-      
-      Logger.log('Workflow completed successfully');
+      threads.forEach((thread) => this.processThread(thread, userConfig));
+
+      Logger.log("Workflow completed successfully");
     } catch (e) {
-      Logger.log('Error in main execution: ' + e.message);
+      Logger.log("Error in main execution: " + e.message);
       throw e;
     }
   }
@@ -240,12 +286,15 @@ class WorkflowOrchestrator {
 function find_and_process_card_transaction_emails() {
   try {
     validateUserConfig(userConfig);
-    
+
     const appConfig = new AppConfig();
     const gmailService = new GmailService(appConfig);
     const transactionProcessor = new TransactionProcessor(appConfig);
-    const sheetsService = new SheetsService(userConfig.spreadsheetId, appConfig);
-    
+    const sheetsService = new SheetsService(
+      userConfig.spreadsheetId,
+      appConfig
+    );
+
     const orchestrator = new WorkflowOrchestrator(
       gmailService,
       transactionProcessor,
@@ -269,18 +318,24 @@ function find_and_process_card_transaction_emails() {
 // Validate user configuration
 function validateUserConfig(userConfig) {
   if (!userConfig?.cards?.length) {
-    throw new ServiceError('Config', 'userConfig.cards must be a non-empty array');
+    throw new ServiceError(
+      "Config",
+      "userConfig.cards must be a non-empty array"
+    );
   }
-  
+
   userConfig.cards.forEach((card, index) => {
     if (!card.lastFourDigits || !card.name || !card.sheetName) {
-      throw new ServiceError('Config', `Invalid card configuration at index ${index}`);
+      throw new ServiceError(
+        "Config",
+        `Invalid card configuration at index ${index}`
+      );
     }
   });
 }
 
 // Export for Node.js environment while maintaining Google Apps Script compatibility
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     AppConfig,
     GmailService,
@@ -288,6 +343,6 @@ if (typeof module !== 'undefined' && module.exports) {
     SheetsService,
     WorkflowOrchestrator,
     ServiceError,
-    validateUserConfig
+    validateUserConfig,
   };
 }

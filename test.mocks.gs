@@ -2,7 +2,7 @@
 const MockGmailApp = {
   search: () => [],
   getUserLabelByName: () => null,
-  createLabel: () => ({ addToThread: () => {} })
+  createLabel: () => ({ addToThread: () => {} }),
 };
 
 const MockSpreadsheetApp = {
@@ -10,16 +10,16 @@ const MockSpreadsheetApp = {
     getSheetByName: (name) => ({
       getLastRow: () => 1,
       getRange: (row, col, numRows, numCols) => ({
-        setValues: (values) => {}
-      })
-    })
-  })
+        setValues: (values) => {},
+      }),
+    }),
+  }),
 };
 
 // Mock service manager
 const MockServices = {
   _originalServices: {},
-  
+
   backup() {
     this._originalServices.GmailApp = GmailApp;
     this._originalServices.SpreadsheetApp = SpreadsheetApp;
@@ -28,7 +28,7 @@ const MockServices = {
   install() {
     // Save originals first
     this.backup();
-    
+
     // Install mocks
     GmailApp = MockGmailApp;
     SpreadsheetApp = MockSpreadsheetApp;
@@ -38,19 +38,19 @@ const MockServices = {
     // Restore original services
     GmailApp = this._originalServices.GmailApp;
     SpreadsheetApp = this._originalServices.SpreadsheetApp;
-  }
+  },
 };
 
 // Mock test data
 const mockUserConfig = {
-  spreadsheetId: '123',
+  spreadsheetId: "123",
   cards: [
     {
-      lastFourDigits: '1234',
-      name: 'Test Card',
-      sheetName: 'Test Sheet'
-    }
-  ]
+      lastFourDigits: "1234",
+      name: "Test Card",
+      sheetName: "Test Sheet",
+    },
+  ],
 };
 
 const mockEmailBody = `
@@ -60,12 +60,12 @@ const mockEmailBody = `
 `;
 
 // Export for Node.js environment while maintaining Google Apps Script compatibility
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     MockGmailApp,
     MockSpreadsheetApp,
     MockServices,
     mockUserConfig,
-    mockEmailBody
+    mockEmailBody,
   };
-} 
+}

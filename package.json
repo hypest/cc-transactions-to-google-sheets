@@ -8,4 +8,4 @@
     "test:debug": "node --inspect-brk test.node.js"
   },
   "type": "commonjs"
-} 
+}
