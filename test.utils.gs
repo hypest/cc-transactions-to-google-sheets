@@ -15,7 +15,7 @@ class TestSuite {
   }
 
   async run() {
-    console.log(`\nRunning ${this.name}:`);
+    // console.log(`\nRunning ${this.name}:`);
     let passed = 0;
     let failed = 0;
 
@@ -27,7 +27,7 @@ class TestSuite {
       try {
         await test.fn();
         test.passed = true;
-        console.log(`✓ ${test.name}`);
+        // console.log(`✓ ${test.name}`);
         passed++;
       } catch (e) {
         test.passed = false;
@@ -38,7 +38,7 @@ class TestSuite {
       }
     }
 
-    console.log(`\nResults: ${passed} passed, ${failed} failed`);
+    // console.log(`\nResults: ${passed} passed, ${failed} failed`);
     return { passed, failed };
   }
 }

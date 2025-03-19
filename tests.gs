@@ -198,7 +198,22 @@ function runTestsWithMocks() {
 }
 
 // Function to run tests and show results in the UI
-function runTestsAndShowResults() {
+function runTestsAndShowResults_Log() {
+  console.log("Running tests...");
+
+  runTestsWithMocks()
+    .then((results) => {
+      console.log(results.output);
+    })
+    .catch((e) => {
+      // Restore original services
+      MockServices.restore();
+      console.error(`Failed to run tests: ${e.message}`);
+    });
+}
+
+// Function to run tests and show results in the UI
+function runTestsAndShowResults_UI() {
   const ui = SpreadsheetApp.getUi();
 
   // Show "Running tests" message
@@ -221,7 +236,7 @@ function runTestsAndShowResults() {
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu("Tests")
-    .addItem("Run All Tests", "runTestsAndShowResults")
+    .addItem("Run All Tests", "runTestsAndShowResults_UI")
     .addToUi();
 }
 
