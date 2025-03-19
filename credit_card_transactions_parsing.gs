@@ -250,7 +250,7 @@ class WorkflowOrchestrator {
 
   processThread(thread, userConfig) {
     const messages = thread.getMessages();
-    
+
     messages.forEach((message) => {
       this.processMessage(message, userConfig);
     });
