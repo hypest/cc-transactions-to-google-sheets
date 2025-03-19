@@ -5,14 +5,14 @@ if (typeof require !== "undefined") {
     assertEquals,
     assertThrows,
     runTests,
-  } = require("./test.utils.gs");
+  } = require("./test.utils.js");
   const {
     MockGmailApp,
     MockSpreadsheetApp,
     MockServices,
     mockUserConfig,
     mockEmailBody,
-  } = require("./test.mocks.gs");
+  } = require("./test.mocks.js");
   const {
     AppConfig,
     GmailService,
@@ -21,7 +21,7 @@ if (typeof require !== "undefined") {
     TransactionProcessor,
     SheetsService,
     WorkflowOrchestrator,
-  } = require("./credit_card_transactions_parsing.gs");
+  } = require("./credit_card_transactions_parsing.js");
 
   Object.assign(global, {
     TestSuite,

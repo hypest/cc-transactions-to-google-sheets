@@ -2,9 +2,9 @@
  * EXAMPLE USER CONFIGURATION FILE
  *
  * To use this script:
- * 1. Make a copy of this file and rename it to 'userConfig.gs'
+ * 1. Make a copy of this file and rename it to 'userConfig.js'
  * 2. Replace the example values with your own settings
- * 3. Make sure not to commit your actual userConfig.gs to the repository
+ * 3. Make sure not to commit your actual userConfig.js to the repository
  */
 
 var userConfig = {

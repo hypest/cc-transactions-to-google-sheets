@@ -1,9 +1,9 @@
 # Ignore the actual user configuration file
-userConfig.gs
+userConfig.js
 
 # But allow the example configuration
-!userConfig.example.gs
+!userConfig.example.js
 
 # Ignore common OS files
 .DS_Store
-Thumbs.db 
+Thumbs.db

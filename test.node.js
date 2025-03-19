@@ -24,11 +24,11 @@ global.SpreadsheetApp = {
 debugger; // Break before loading dependencies
 
 // Import the test configuration
-const userConfig = require("./userConfig.test.gs");
+const userConfig = require("./userConfig.test.js");
 global.userConfig = userConfig;
 
 // Import the tests and run them
-const { runAllTests } = require("./tests.gs");
+const { runAllTests } = require("./tests.js");
 
 debugger; // Break before running tests
 
