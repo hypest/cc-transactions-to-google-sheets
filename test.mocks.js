@@ -44,6 +44,7 @@ const MockServices = {
 // Mock test data
 const mockUserConfig = {
   spreadsheetId: "123",
+  locale: "el-GR",
   cards: [
     {
       lastFourDigits: "1234",
@@ -56,7 +57,7 @@ const mockUserConfig = {
 const mockEmailBody = `
 Σύνολο Κινήσεων Κάρτας **1234
 ΧΡΕΩΣΗ 50,00 Ημ/νία: 01/01/2024 Αιτιολογία: Test Purchase Έξοδα Συναλλάγματος: 0,00 Έξοδα Ανάληψης Μετρητών: 0,00
-ΠΙΣΤΩΣΗ 25,00 Ημ/νία: 02/01/2024 Αιτιολογία: Test Refund Έξοδα Συναλλάγματος: 0,00 Έξοδα Ανάληψης Μετρητών: 0,00
+ΠΙΣΤΩΣΗ 1.600,00 Ημ/νία: 03/05/2025 Αιτιολογία: ΠΛ. ΚΑΡΤΑΣ WEB/EUROP Έξοδα Συναλλάγματος: 0,00 Έξοδα Ανάληψης Μετρητών: 0,00
 `;
 
 // Export for Node.js environment while maintaining Google Apps Script compatibility

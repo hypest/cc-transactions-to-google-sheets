@@ -96,7 +96,7 @@ transactionProcessorTests.test("should extract transactions", () => {
 
   assertEquals(transactions.length, 2);
   assertEquals(transactions[0].amount, 50);
-  assertEquals(transactions[1].amount, -25); // Debit transaction should be negative
+  assertEquals(transactions[1].amount, -1600); // Debit transaction should be negative
 });
 
 // SheetsService Tests

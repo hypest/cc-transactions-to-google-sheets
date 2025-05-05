@@ -17,6 +17,7 @@ const userConfigSample = {
     },
   ],
   spreadsheetId: "test_spreadsheet_id",
+  locale: "el-GR",
 };
 
 // Export for Node.js environment

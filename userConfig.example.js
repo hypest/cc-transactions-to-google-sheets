@@ -28,4 +28,5 @@ var userConfig = {
   // You can find this in the URL of your spreadsheet:
   // https://docs.google.com/spreadsheets/d/[THIS_IS_YOUR_SPREADSHEET_ID]/edit
   spreadsheetId: "your_spreadsheet_id_here",
+  locale: "el-GR",
 };

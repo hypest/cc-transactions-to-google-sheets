@@ -97,6 +97,13 @@ class TransactionProcessor {
         `(?<forexFees>[\\d,\.]+)\\sΈξοδα\\sΑνάληψης\\sΜετρητών:\\s(?<cashWithdrawalFees>[\\d,\.]+)`,
       "g"
     );
+
+    // Format a test number to detect the locale's group and decimal separators
+    const example = 12345.6;
+    const fmt = new Intl.NumberFormat(userConfig.locale);
+    const parts = fmt.formatToParts(example);
+    this.numberFormatGroup = parts.find(p => p.type === 'group')?.value || ',';
+    this.numberFormatDecimal = parts.find(p => p.type === 'decimal')?.value || '.';
   }
 
   identifyCard(emailBody, userConfig) {
@@ -133,7 +140,7 @@ class TransactionProcessor {
 
     try {
       while ((match = this.transactionRegex.exec(emailBody)) !== null) {
-        const amount = parseFloat(match.groups.amount.replace(",", "."));
+        const amount = this.parseLocaleNumber(match.groups.amount);
         const transactionType = match.groups.transactionType;
 
         transactions.push({
@@ -156,6 +163,14 @@ class TransactionProcessor {
         `Failed to extract transactions: ${e.message}`
       );
     }
+  }
+
+  parseLocaleNumber(numberString) {
+    const normalized = numberString
+      .replace(new RegExp('\\' + this.numberFormatGroup, 'g'), '')
+      .replace(new RegExp('\\' + this.numberFormatDecimal), '.');
+
+    return parseFloat(normalized);
   }
 }
 
