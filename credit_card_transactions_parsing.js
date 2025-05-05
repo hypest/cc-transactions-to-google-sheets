@@ -92,9 +92,9 @@ class TransactionProcessor {
     // Define the transaction regex
     this.transactionRegex = new RegExp(
       `(?<transactionType>${this.appConfig.transactionTypes.credit}|${this.appConfig.transactionTypes.debit})\\s` +
-        `(?<amount>[\\d,]+)\\sΗμ\\/νία:\\s(?<date>\\d{2}\\/\\d{2}\\/\\d{4})\\s` +
+        `(?<amount>[\\d,\.]+)\\sΗμ\\/νία:\\s(?<date>\\d{2}\\/\\d{2}\\/\\d{4})\\s` +
         `Αιτιολογία:\\s(?<description>.+?)\\sΈξοδα[\\s\\n]+?Συναλλάγματος:\\s` +
-        `(?<forexFees>[\\d,]+)\\sΈξοδα\\sΑνάληψης\\sΜετρητών:\\s(?<cashWithdrawalFees>[\\d,]+)`,
+        `(?<forexFees>[\\d,\.]+)\\sΈξοδα\\sΑνάληψης\\sΜετρητών:\\s(?<cashWithdrawalFees>[\\d,\.]+)`,
       "g"
     );
   }
