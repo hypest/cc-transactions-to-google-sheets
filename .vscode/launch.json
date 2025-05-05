@@ -3,11 +3,11 @@
   "configurations": [
     {
       "type": "node",
-    "runtimeExecutable": "/Users/hypest/.nvm/versions/node/v23.1.0/bin/node",
+    "runtimeExecutable": "/Users/hypest/.nvm/versions/node/v23.11.0/bin/node",
       "request": "launch",
       "name": "Debug Tests",
       "skipFiles": ["<node_internals>/**"],
-      "program": "${workspaceFolder}/test.local.js"
+      "program": "${workspaceFolder}/test.node.js"
     }
   ]
 } 
