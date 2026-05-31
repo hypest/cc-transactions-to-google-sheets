@@ -72,7 +72,7 @@ This repository includes a GitHub Actions workflow that deploys the script to Go
    - `GAS_CLASP_CREDENTIALS`: the full JSON contents of `~/.clasprc.json`
 6. Merge or push changes to `main` to trigger deployment.
 
-The workflow writes both configuration files at runtime. It keeps `rootDir` empty so `clasp` deploys from the repository root, and no deployment secrets need to be committed to the repository.
+The workflow writes both configuration files at runtime. It keeps `rootDir` as an empty string, which is the `clasp` setting for deploying from the repository root instead of a subdirectory, and no deployment secrets need to be committed to the repository.
 
 ## Setting Up Gmail Filters
 
