@@ -33,11 +33,18 @@ jobs:
           GAS_CLASP_CREDENTIALS: ${{ secrets.GAS_CLASP_CREDENTIALS }}
           GAS_SCRIPT_ID: ${{ secrets.GAS_SCRIPT_ID }}
         run: |
-          test -n "$GAS_CLASP_CREDENTIALS"
-          test -n "$GAS_SCRIPT_ID"
+          test -n "$GAS_CLASP_CREDENTIALS" || {
+            echo "Missing GAS_CLASP_CREDENTIALS secret."
+            exit 1
+          }
+          test -n "$GAS_SCRIPT_ID" || {
+            echo "Missing GAS_SCRIPT_ID secret."
+            exit 1
+          }
 
           printf '%s' "$GAS_CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
 
+          # rootDir is intentionally empty so clasp deploys files from the repository root.
           cat <<EOF > .clasp.json
           {
             "scriptId": "${GAS_SCRIPT_ID}",

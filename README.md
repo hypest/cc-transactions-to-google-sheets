@@ -42,7 +42,7 @@ To manage and run the scripts in this project, you can use the following npm com
    ```sh
    clasp link
    ```
-   This creates a local `.clasp.json` file, which is now ignored by git so that project-specific configuration is not committed.
+   This creates a local `.clasp.json` file, which is ignored by git so that project-specific configuration is not committed.
 5. Push the code to your Apps Script project:
    ```sh
    clasp push
@@ -72,7 +72,7 @@ This repository includes a GitHub Actions workflow that deploys the script to Go
    - `GAS_CLASP_CREDENTIALS`: the full JSON contents of `~/.clasprc.json`
 6. Merge or push changes to `main` to trigger deployment.
 
-The workflow writes both configuration files at runtime, so no deployment secrets need to be committed to the repository.
+The workflow writes both configuration files at runtime. It keeps `rootDir` empty so `clasp` deploys from the repository root, and no deployment secrets need to be committed to the repository.
 
 ## Setting Up Gmail Filters
 
