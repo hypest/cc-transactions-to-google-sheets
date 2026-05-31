@@ -47,10 +47,10 @@ jobs:
 
           mkdir -p "$HOME"
           printf '%s' "$GAS_CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
-          printf '%s' "$GAS_CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
           chmod 600 "$HOME/.clasprc.json"
+
           # rootDir is intentionally empty so clasp deploys files from the repository root.
-          # rootDir is intentionally empty so clasp deploys files from the repository root.
+          node <<'EOF'
           const fs = require("fs");
 
           fs.writeFileSync(
