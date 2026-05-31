@@ -1,0 +1,54 @@
+name: Deploy to Google Apps Script
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run tests
+        run: npm test
+
+      - name: Install clasp
+        run: npm install --global @google/clasp
+
+      - name: Configure clasp
+        env:
+          GAS_CLASP_CREDENTIALS: ${{ secrets.GAS_CLASP_CREDENTIALS }}
+          GAS_SCRIPT_ID: ${{ secrets.GAS_SCRIPT_ID }}
+        run: |
+          test -n "$GAS_CLASP_CREDENTIALS"
+          test -n "$GAS_SCRIPT_ID"
+
+          printf '%s' "$GAS_CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
+
+          cat <<EOF > .clasp.json
+          {
+            "scriptId": "${GAS_SCRIPT_ID}",
+            "rootDir": "",
+            "scriptExtensions": [".js", ".gs"],
+            "htmlExtensions": [".html"],
+            "jsonExtensions": [".json"],
+            "filePushOrder": [],
+            "skipSubdirectories": false
+          }
+          EOF
+
+      - name: Deploy to Google Apps Script
+        run: clasp push --force
