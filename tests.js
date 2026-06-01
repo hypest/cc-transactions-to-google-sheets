@@ -52,6 +52,7 @@ const appConfigTests = new TestSuite("AppConfig Tests");
 appConfigTests.test("should create valid app config", () => {
   const appConfig = new AppConfig();
   assertEquals(appConfig.labels.primary, "cc_transactions_report");
+  assertEquals(appConfig.labels.overThreshold, "over-threshold");
   assertEquals(appConfig.transactionTypes.credit, "ΧΡΕΩΣΗ");
 });
 
@@ -97,6 +98,15 @@ transactionProcessorTests.test("should extract transactions", () => {
   assertEquals(transactions.length, 2);
   assertEquals(transactions[0].amount, 50);
   assertEquals(transactions[1].amount, -1600); // Debit transaction should be negative
+});
+
+transactionProcessorTests.test("should extract balance", () => {
+  const appConfig = new AppConfig();
+  const processor = new TransactionProcessor(appConfig);
+  processor.initializeRegex(mockUserConfig);
+  const balance = processor.extractBalance(mockEmailBody);
+
+  assertEquals(balance, 1328.19);
 });
 
 // SheetsService Tests
@@ -163,6 +173,53 @@ workflowOrchestratorTests.test(
     } catch (e) {
       assertEquals(e.message, "Failed to get email body");
     }
+  }
+);
+
+workflowOrchestratorTests.test(
+  "should mark thread with over-threshold label when balance exceeds threshold",
+  () => {
+    const appConfig = new AppConfig();
+    appConfig.overThresholdDebtThreshold = 1000;
+    const gmailService = new GmailService(appConfig);
+    const transactionProcessor = new TransactionProcessor(appConfig);
+    const sheetsService = new SheetsService("123", appConfig);
+    const orchestrator = new WorkflowOrchestrator(
+      gmailService,
+      transactionProcessor,
+      sheetsService
+    );
+
+    const labelsAdded = [];
+    const processedLabel = { name: appConfig.labels.processed };
+    const overThresholdLabel = { name: appConfig.labels.overThreshold };
+
+    GmailApp.getUserLabelByName = (labelName) => {
+      if (labelName === appConfig.labels.processed) {
+        return processedLabel;
+      }
+      if (labelName === appConfig.labels.overThreshold) {
+        return overThresholdLabel;
+      }
+      return null;
+    };
+    GmailApp.createLabel = (labelName) => ({ name: labelName });
+
+    const mockThread = {
+      getMessages: () => [
+        {
+          getPlainBody: () => mockEmailBody,
+        },
+      ],
+      addLabel: (label) => labelsAdded.push(label.name),
+    };
+
+    orchestrator.processThread(mockThread, mockUserConfig);
+
+    assertEquals(labelsAdded, [
+      appConfig.labels.overThreshold,
+      appConfig.labels.processed,
+    ]);
   }
 );
 

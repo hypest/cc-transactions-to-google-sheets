@@ -10,15 +10,57 @@ class ServiceError extends Error {
 // Application-wide constants
 class AppConfig {
   constructor() {
+    const overThresholdDebtThreshold = this.parseThresholdValue(
+      typeof PropertiesService !== "undefined"
+        ? PropertiesService.getScriptProperties().getProperty(
+            "OVER_THRESHOLD_DEBT_THRESHOLD"
+          )
+        : null
+    );
+
     this.labels = {
       primary: "cc_transactions_report",
       processed: "auto_cc_report_processed",
+      overThreshold: "over-threshold",
     };
 
     this.transactionTypes = {
       credit: "ΧΡΕΩΣΗ",
       debit: "ΠΙΣΤΩΣΗ",
     };
+
+    this.overThresholdDebtThreshold = Number.isFinite(overThresholdDebtThreshold)
+      ? overThresholdDebtThreshold
+      : null;
+  }
+
+  parseThresholdValue(thresholdValue) {
+    if (thresholdValue == null || thresholdValue === "") {
+      return null;
+    }
+
+    let normalized = String(thresholdValue).trim().replace(/\s/g, "");
+
+    if (normalized.includes(",") && normalized.includes(".")) {
+      if (normalized.lastIndexOf(",") > normalized.lastIndexOf(".")) {
+        normalized = normalized.replace(/\./g, "").replace(",", ".");
+      } else {
+        normalized = normalized.replace(/,/g, "");
+      }
+    } else if (normalized.includes(",")) {
+      normalized = normalized.replace(",", ".");
+    }
+
+    const parsed = Number.parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  isOverThreshold(balance) {
+    return (
+      Number.isFinite(balance) &&
+      Number.isFinite(this.overThresholdDebtThreshold) &&
+      balance > this.overThresholdDebtThreshold
+    );
   }
 }
 
@@ -66,6 +108,29 @@ class GmailService {
       );
     }
   }
+
+  markThreadAsOverThreshold(thread) {
+    try {
+      let overThresholdLabel = GmailApp.getUserLabelByName(
+        this.appConfig.labels.overThreshold
+      );
+      if (!overThresholdLabel) {
+        Logger.log(
+          "Creating the over threshold label: " +
+            this.appConfig.labels.overThreshold
+        );
+        overThresholdLabel = GmailApp.createLabel(
+          this.appConfig.labels.overThreshold
+        );
+      }
+      thread.addLabel(overThresholdLabel);
+    } catch (e) {
+      throw new ServiceError(
+        "Gmail",
+        `Failed to mark thread as over threshold: ${e.message}`
+      );
+    }
+  }
 }
 
 // Service for handling transaction processing
@@ -77,6 +142,7 @@ class TransactionProcessor {
     this.appConfig = appConfig;
     this.cardIdentifiers = {};
     this.transactionRegex = null;
+    this.balanceRegex = null;
   }
 
   initializeRegex(userConfig) {
@@ -97,6 +163,7 @@ class TransactionProcessor {
         `(?<forexFees>[\\d,\.]+)\\sΈξοδα\\sΑνάληψης\\sΜετρητών:\\s(?<cashWithdrawalFees>[\\d,\.]+)`,
       "g"
     );
+    this.balanceRegex = /Υπόλοιπο:\s*(?<balance>[\d,.]+)/;
 
     // Format a test number to detect the locale's group and decimal separators
     const example = 12345.6;
@@ -163,6 +230,23 @@ class TransactionProcessor {
         `Failed to extract transactions: ${e.message}`
       );
     }
+  }
+
+  extractBalance(emailBody) {
+    if (!emailBody) {
+      throw new ServiceError("Processor", "Email body is required");
+    }
+
+    if (!this.balanceRegex) {
+      this.balanceRegex = /Υπόλοιπο:\s*(?<balance>[\d,.]+)/;
+    }
+
+    const match = this.balanceRegex.exec(emailBody);
+    if (!match?.groups?.balance) {
+      return null;
+    }
+
+    return this.parseLocaleNumber(match.groups.balance);
   }
 
   parseLocaleNumber(numberString) {
@@ -261,15 +345,23 @@ class WorkflowOrchestrator {
 
     Logger.log("Extracted " + transactions.length + " transactions");
     this.sheetsService.addTransactionsToSheet(transactions, card.sheetName);
+
+    const balance = this.transactionProcessor.extractBalance(emailBody);
+    return this.transactionProcessor.appConfig.isOverThreshold(balance);
   }
 
   processThread(thread, userConfig) {
     const messages = thread.getMessages();
+    let threadIsOverThreshold = false;
 
     messages.forEach((message) => {
-      this.processMessage(message, userConfig);
+      threadIsOverThreshold =
+        this.processMessage(message, userConfig) || threadIsOverThreshold;
     });
 
+    if (threadIsOverThreshold) {
+      this.gmailService.markThreadAsOverThreshold(thread);
+    }
     this.gmailService.markThreadAsProcessed(thread);
   }
 

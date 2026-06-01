@@ -85,3 +85,11 @@ To ensure that the script processes only the relevant emails, set up a Gmail fil
 5. Save the filter.
 
 The script will now process emails with this label and log the transactions into your Google Sheet.
+
+## Over-threshold debt alerts
+
+You can optionally tag emails when the parsed `Υπόλοιπο` is above a threshold:
+
+1. In Apps Script, open **Project Settings** > **Script properties**.
+2. Add the property `OVER_THRESHOLD_DEBT_THRESHOLD` with a numeric value (for example `1000` or `1.000,00`).
+3. When an email's `Υπόλοιπο` exceeds that value, the script adds the Gmail label `over-threshold` to the thread.
