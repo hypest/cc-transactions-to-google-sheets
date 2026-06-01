@@ -42,6 +42,7 @@ To manage and run the scripts in this project, you can use the following npm com
    ```sh
    clasp link
    ```
+   This creates a local `.clasp.json` file, which is ignored by git so that project-specific configuration is not committed.
 5. Push the code to your Apps Script project:
    ```sh
    clasp push
@@ -51,6 +52,27 @@ To manage and run the scripts in this project, you can use the following npm com
    clasp open
    ```
 7. Set up a trigger to run the script periodically by clicking on the clock icon in the Apps Script editor.
+
+## Automated deployment with GitHub Actions
+
+This repository includes a GitHub Actions workflow that deploys the script to Google Apps Script on every push to `main` and can also be run manually from the Actions tab.
+
+### Manual setup steps
+
+1. Create or open the target Google Apps Script project.
+2. Copy its **Script ID** from the Apps Script project settings.
+3. In a local clone, authenticate `clasp`:
+   ```sh
+   npm install -g @google/clasp
+   clasp login
+   ```
+4. Copy the contents of your local `~/.clasprc.json` file.
+5. In GitHub, add these repository secrets:
+   - `GAS_SCRIPT_ID`: the target Apps Script project's Script ID
+   - `GAS_CLASP_CREDENTIALS`: the full JSON contents of `~/.clasprc.json`
+6. Merge or push changes to `main` to trigger deployment.
+
+The workflow writes both configuration files at runtime. It keeps `rootDir` as an empty string, which is the `clasp` setting for deploying from the repository root instead of a subdirectory. No deployment secrets need to be committed to the repository.
 
 ## Setting Up Gmail Filters
 

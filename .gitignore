@@ -1,5 +1,7 @@
 # Ignore the actual user configuration file
 userConfig.js
+.clasp.json
+.clasprc.json
 
 # But allow the example configuration
 !userConfig.example.js

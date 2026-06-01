@@ -1,0 +1,70 @@
+name: Deploy to Google Apps Script
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Install clasp
+        run: npm install --global @google/clasp
+
+      - name: Configure clasp
+        env:
+          GAS_CLASP_CREDENTIALS: ${{ secrets.GAS_CLASP_CREDENTIALS }}
+          GAS_SCRIPT_ID: ${{ secrets.GAS_SCRIPT_ID }}
+        run: |
+          test -n "$GAS_CLASP_CREDENTIALS" || {
+            echo "Missing GAS_CLASP_CREDENTIALS secret."
+            exit 1
+          }
+          test -n "$GAS_SCRIPT_ID" || {
+            echo "Missing GAS_SCRIPT_ID secret."
+            exit 1
+          }
+
+          mkdir -p "$HOME"
+          printf '%s' "$GAS_CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+
+          # rootDir is intentionally empty so clasp deploys files from the repository root.
+          node <<'EOF'
+          const fs = require("fs");
+
+          fs.writeFileSync(
+            ".clasp.json",
+            JSON.stringify(
+              {
+                scriptId: process.env.GAS_SCRIPT_ID,
+                rootDir: "",
+              },
+              null,
+              2
+            ) + "\n"
+          );
+          EOF
+
+      - name: Deploy to Google Apps Script
+        run: clasp push --force
